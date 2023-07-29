@@ -1,17 +1,18 @@
-h1 {
-    font-size: 300%;
-    text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-}
-
-p {
-    font-size: 100%;
-    text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-}
+body {
+    font-family: 'Lato', sans-serif;
+  }
+  
+  h1 {
+      font-size: 300%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+  }
+  
+  p {
+      font-size: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+  }
+  
