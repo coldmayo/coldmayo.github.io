@@ -8,7 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Open index.html",
-            "file": "/home/wallachmayas/Documents/GitHub/coldmayo.github.io/src/index.html"
+            "file": "/home/wallachmayas/Documents/GitHub/coldmayo.github.io/index.html"
         }
     ]
 }
