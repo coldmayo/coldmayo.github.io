@@ -8,6 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Open index.html",
+            "timeout": 20000,
             "file": "/home/wallachmayas/Documents/GitHub/coldmayo.github.io/index.html"
         }
     ]
