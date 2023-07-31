@@ -8,7 +8,13 @@ h1 {
       justify-content: center;
       align-items: center;
 }
-  
+
+h2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 p {
       font-size: 100%;
       display: flex;
@@ -31,4 +37,32 @@ p {
 #parag {
     float: left;
     width: 500px;
+}
+
+.edu {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 300px;
+    background-color: #000000;
+    border-radius: 10px;
+    color: white;
+}
+
+#parent1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 900px;
+    margin: auto;
+    width: 50%;
+    padding: 10px;
+}
+
+.langs {
+    margin: auto;
+    width: 600px;
+    text-align: center;
+    /* border: 5px solid; */
 }
