@@ -1,18 +1,34 @@
 body {
     font-family: 'Lato', sans-serif;
-  }
+}
   
-  h1 {
+h1 {
       font-size: 300%;
       display: flex;
       justify-content: center;
       align-items: center;
-  }
+}
   
-  p {
+p {
       font-size: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-  }
-  
+}
+
+#parent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#picOfMe {
+    float: right;
+    width: calc(100% - 100px)-100px;
+
+}
+
+#parag {
+    float: left;
+    width: 500px;
+}
