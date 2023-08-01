@@ -84,3 +84,11 @@ p {
     width: 400px;
     /* border: 5px solid; */
 }
+
+.media {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    width: 500px;
+}
