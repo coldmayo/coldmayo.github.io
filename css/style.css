@@ -90,5 +90,6 @@ p {
     justify-content: center;
     align-items: center;
     margin: auto;
-    width: 500px;
+    text-align: center;
+    width: calc(100% - 100px);
 }
