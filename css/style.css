@@ -15,6 +15,12 @@ h2 {
     align-items: center;
 }
 
+h4 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 p {
       font-size: 100%;
       display: flex;
