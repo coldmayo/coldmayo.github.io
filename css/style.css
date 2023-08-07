@@ -109,4 +109,28 @@ p {
   left: 50%;
   -ms-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
-  }
+}
+
+.tier {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+}
+
+.text {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    /*text-align: center; */
+    width: 900px;
+}
+
+a:link {
+    color: blue;
+}
+  
+a:visited {
+    color: blue;
+}
