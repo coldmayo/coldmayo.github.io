@@ -6,6 +6,7 @@ Hello, I'm Maya Wallach and this is my portfolio! I'm a physics major at Michiga
 
 * Python
 * C/C++
+* Rust
 * JavaScript/Typescript
 * PHP
 * HTML
