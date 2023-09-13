@@ -56,9 +56,10 @@ p {
     text-align: center;
     width: 300px;
     /* background-color: #000000; */
-    border-radius: 10px;
+    border-radius: 30px;
     /* color: white; */
 }
+
 
 #parent1 {
     display: flex;
@@ -82,7 +83,7 @@ p {
     justify-content: center;
     align-items: center;
     margin:auto;
-    width: calc(100% - 100px);
+    width: 800px;
     /* border: 5px solid; */
 }
 
