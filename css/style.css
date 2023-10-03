@@ -6,7 +6,12 @@ body {
     font-family: 'Lato', sans-serif;
     cursor: url("../cursors/use3.cur"), auto;
 }
-  
+
+.dark_mode {
+    background-color: black;
+    color: white;
+}
+
 h1 {
       font-size: 300%;
       display: flex;
