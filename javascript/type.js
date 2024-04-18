@@ -3,7 +3,7 @@
 const typedTextSpan = document.querySelector(".typed-text");
 const cursorSpan = document.querySelector(".cursor");
 
-const textArray = ["\xa0a Computer Scientist", "\xa0a Life-long Learner", "\xa0Adaptable", "\xa0an Efficient Worker", "\xa0a Team Player"];
+const textArray = ["\xa0a Physicist", "\xa0a Life-long Learner", "\xa0Adaptable", "\xa0an Efficient Worker", "\xa0a Team Player"];
 const typingDelay = 120;   // how long it takes to type a letter
 const erasingDelay = 100;  // how long it takes to delete a letter
 const newTextDelay = 400;  // how long it takes in between words
