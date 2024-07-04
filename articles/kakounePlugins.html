@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Making a Kakoune plugin</title>
+        <link rel="icon" type="image/png" href="../imgs/avatar_mayo.jpeg"/>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/navMenu.css">
+    </head>
+    <body>
+        <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span><br>
+        <h1>How to make a Kakoune plugin</h1>
+        <h3 style="text-align: center;"></h3>
+        
+        <div class="text" style="font-size: 20px;">
+            <p>
+                Recently, I have fallen in love with the text editor Kakoune. The shortcuts make sense to me and I enjoy modal editing (switching between insert, normal, visual modes). But, NeoVim has an Obsidian plugin that I really enjoy, which Kakoune does not have.
+                So, I took matters into my own hands and made my own. I hope in this article I can teach you how to make your own very simple plugin.
+            </p>
+        </div>
+        <h2>Setup</h2>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                Go to the .config/kak/plugins/ folder and create a directory for your plugin. In it, create a file with the .kak extention, this will be where the code of your plugin will be stored. In your kakrc include the following code:
+            </p>
+        </div>
+        <code>
+            source ~.config/kak/plugins/your-dir-name/your-plugin-name.kak do sh%{}
+        </code>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                This allows Kakoune to implement the changes your plugin makes. Whenever you want your updates to be applied exit and enter back into Kakoune.
+            </p>
+        </div>
+        <h2>Making your first command</h2>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                We will be making a simple "Hello World" plugin, where the user enters the command: :hello-world and "Hello World" will appear at the bottom of the screen. In the .kak file, the first line should be:
+            </p>
+        </div>
+        <code>
+            declare-user-mode your-file-name
+        </code>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                User Mode allows the user to store custom mappings with no risk to shadow builtin ones. This is perfect for making commands for a plugin. Using define-command we can create a new command (as the name suggests). We can add the -docstring switch to show the documentation string for the command.
+            </p>
+        </div>
+        <code>
+            define-command -docstring "Prints 'Hello World'" hello-world %{}
+        </code>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                To make the command actually usable, add the code to your file below:
+            </p>
+        </div>
+        <code>
+            map global user n :hello-world<ret>
+        </code>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                The whole file should look like this:
+            </p>
+        </div>
+        <pre>
+            <code>
+                declare-user-mode your-file-name
+    
+                define-command -docstring "Prints 'Hello World'" hello-world %{}
+    
+                map global user n :hello-world
+            </code>
+        </pre>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                If you restart Kakoune, you should be able to use the :hello-world command, but it doesn't do anything. Thankfully, we can use bash in Kakoune scripts using evaluate-commands as shown below:
+            </p>
+        </div>
+        <pre>
+            <code>
+                define-command -docstring "Prints 'Hello World'" hello-world %{
+                    evaluate-commands %sh{
+
+                    }
+                }
+            </code>
+        </pre>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                In the %sh{} bash commands can be put in. To print "Hello World" at the bottom of the screen we can use echo:
+            </p>
+        </div>
+        <pre>
+            <code>
+                define-command -docstring "Prints 'Hello World'" hello-world %{
+                    evaluate-commands %sh{
+                        echo 'echo -markup Hello World'
+                    }
+                }
+            </code>
+        </pre>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                The echo command is used to enter Kakoune commands. The command to be entered, echo -markup Hello World, allows for Hello World to be printed at the bottom of the screen. The -markup switch allows for display text in an information box. The full code should be as follows:
+            </p>
+        </div>
+        <pre>
+            <code>
+                declare-user-mode your-file-name
+
+                define-command -docstring "Prints 'Hello World'" hello-world %{
+                    evaluate-commands %sh{
+                        echo 'echo -markup Hello World'
+                    }
+                }
+
+                map global user n :hello-world
+            </code>
+        </pre>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                If Kakoune is restarted and the :hello-world command is entered "Hello World" should be shown at the bottom of the screen. We have made our first command. 
+            </p>
+        </div>
+        <h2>Wrapping Up</h2>
+        <div class="text" style="font-size: 20px;">
+            <p>
+                In this article we made a very simple plugin with a simple Hello World command. Hopefully the reader will use this information to make their own plugins. For more info check out the documentation in Kakoune's github repo in kakoune/doc/pages/commands.asciidoc. 
+            </p>
+        </div>
+    </body>
+    <script src="../javascript/main.js"></script>
+    <script src="../javascript/navMenu.js"></script>
+</html>

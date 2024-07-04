@@ -38,6 +38,12 @@ p {
     align-items: center;
 }
 
+code {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 #parent {
     display: flex;
     justify-content: center;
