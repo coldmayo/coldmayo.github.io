@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <title>Maya's Portfolio</title>
+    <head>
+        <link rel="icon" type="image/png" href="../imgs/avatar_mayo.jpeg"/>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/navMenu.css">
+    </head>
+    <div id="pancakeMenu" class="overlay">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <div class="overlay-content">
+          <a href="../index.html">Home</a>
+          <a href="blog.html">Blog</a>
+          <a href="expirence.html">Experience</a>
+          <a href="projects.html">Projects</a>
+          <a href="MayaWallachCV.pdf" target="_blank">CV</a>
+          <a href="contact.html">Contact</a>
+        </div>
+    </div>
+    <body>
+        <span style="font-size:30px;cursor:url('../cursors/gam874.cur'), auto;" onclick="openNav()">&#9776;</span>
+        <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span>
+        <h1>Favorite Song Currently</h1>
+        <div class="music" style="text-align: center;">
+			
+            <p style="text-align: center; font-size: 20px;">Mark Lettieri - Pulsar (feat. Robert Sput Searight)</p><br>
+			<img src="../songs/Pulsar.jpg"><br>
+            <audio controls>
+				<source src="../songs/Pulsar (feat. Robert Sput Searight).mp3">
+            </audio>
+        </div>
+        <script defer src="../javascript/main.js"></script>
+        <script defer src="../javascript/navMenu.js"></script>
+    </body>
+</html>
