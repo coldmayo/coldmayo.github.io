@@ -97,15 +97,6 @@ code {
     /* border: 5px solid; */
 }
 
-.projs1 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin:auto;
-    width: 400px;
-    /* border: 5px solid; */
-}
-
 .media {
     display: flex;
     justify-content: center;
@@ -155,4 +146,79 @@ a:link {
   
 a:visited {
     color: blue;
+}
+
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+
+    width: 95%;
+    max-width: 1600px;
+
+    margin: auto;
+}
+
+.project-card {
+    border: 2px;
+    border-radius: 15px;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+}
+
+.section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+
+    gap: 25px;
+
+    width: 95%;
+    max-width: 1600px;
+
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    border: 2px;
+    border-radius: 15px;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+
+    background-color: rgba(255,255,255,0.03);
+}
+
+.card h3,
+.card h4,
+.card p {
+    text-align: center;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+
+    gap: 20px;
+
+    width: 95%;
+    max-width: 1200px;
+
+    margin: auto;
+}
+
+.skill-card {
+    border: 2px;
+    border-radius: 15px;
+
+    padding: 20px;
+
+    text-align: center;
+}
+
+.skill-icons img {
+    margin: 10px;
 }

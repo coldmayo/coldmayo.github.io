@@ -14,6 +14,7 @@
           <a href="blog.html">Blog</a>
 		  <a href="songOfTheMoment.html">Favorite Song</a>
           <a href="expirence.html">Experience</a>
+          <a href="MayaResume.pdf" target="_blank">Resume</a>
           <a href="MayaCV-2026.pdf" target="_blank">CV</a>
           <a href="contact.html">Contact</a>
         </div>
@@ -22,8 +23,27 @@
         <span style="font-size:30px;cursor:url('../cursors/gam874.cur'), auto;" onclick="openNav()">&#9776;</span>
         <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span>
         <h1>Projects</h1>
-        <div class="projs1">
-            <div class="klaudOS" style="width: 300;padding: 10px;">
+        <div class= "projects-grid">
+        <div class = "project-card">
+            <div class="PortfolioPred">
+                <h2>Portfolio Predictor</h2>
+                <p>Quantitative Stock Forecasting Using ML Models</p>
+                <ul>
+                    <li>Details: </li>
+                    <ul>
+                        <li>Financial time-series forecasting using 10 years of market data</li>
+                        <li>Random Forest, XGBoost, LSTM, etc predictive models</li>
+                        <li>MPI-parallelized training and evaluation pipeline</li>
+                        <li>Backtesting engine with Sharpe ratio and drawdown analysis</li>
+                        <li>Languages: Python</li>
+                        <li>Tools: PyTorch, SciKit-Learn, etc</li>
+                    </ul>
+                    <li><a href="https://github.com/coldmayo/KlaudPortfolioPredictor" target="_blank">GitHub</a></li>
+                </ul> 
+            </div>
+        </div>
+        <div class="project-card">
+            <div class="klaudOS">
                 <h2>KlaudOS</h2>
                 <p>Klaud themed Operating System</p>
                 <ul>
@@ -40,8 +60,8 @@
                 </ul> 
             </div>
         </div>
-        <div class="projs1">
-            <div class="40kAI" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="40kAI">
                 <h2>40kAI</h2>
                 <p>Using Reinforcement Learning to play Warhammer 40k</p>
                 <ul>
@@ -58,8 +78,8 @@
                 </ul>
             </div>
         </div>
-        <div class="projs1">
-            <div class="KlaudSynth" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="KlaudSynth">
                 <h2>KlaudSynth</h2>
                 <p>Using DSP to make my own command line synthesizer</p>
                 <ul>
@@ -77,8 +97,8 @@
                 </ul>
             </div>
         </div>
-        <div class="projs1">
-            <div class="Obsidian-kak" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="Obsidian-kak">
                 <h2>Obsidian-kak</h2>
                 <p>Kakoune Plugin for Obsidian Integration</p>
                 <ul>
@@ -91,8 +111,8 @@
                 </ul>
             </div>
         </div>
-        <div class="projs1">
-            <div class="CrackMes" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="CrackMes">
                 <h2>SolvedCrackMes</h2>
                 <p>Repository of CrackMes and their solutions (For Linux)</p>
                 <ul>
@@ -108,8 +128,8 @@
                 </ul>
             </div>
         </div>
-        <div class="projs1">
-            <div class="NumStatID" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="NumStatID">
                 <h2>Number Station Id</h2>
                 <p>Using Machine Learning to Identify Number Stations</p>
                 <ul>
@@ -124,8 +144,8 @@
                 </ul>
             </div>
         </div>
-        <div class="projs1">
-            <div class="MMBCReco" style="width: 300;padding: 10px;">
+        <div class="project-card">
+            <div class="MMBCReco">
                 <h2>MMBCReco</h2>
                 <p>Using Machine Learning to Identify/Classify tracks in a bubble chamber</p>
                 <ul>
@@ -140,6 +160,7 @@
                     <li><a href="https://github.com/coldmayo/MMBCReco" target="_blank">GitHub</a></li>
                 </ul>
             </div>
+        </div>
         </div>
     </body>
     <script defer src="../javascript/main.js"></script>
