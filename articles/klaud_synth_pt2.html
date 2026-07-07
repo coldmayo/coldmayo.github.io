@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Making a Synth from Scratch Part 2</title>
+        <link rel="icon" type="image/png" href="../imgs/avatar_mayo.jpeg"/>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/navMenu.css">
+        <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+        </script>
+        <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    </head>
+    <body>
+        <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span><br>
+        <h1>Making a Synth from Scratch Part 2</h1>
+        <h3 style="text-align: center;"></h3>
+        <div class="text" style="font-size: 20px;">
+        <p>In this second part I will go over the creation and thought process behind building the PCB design of the hardware version.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>See the figure below to see the planned layout excluding the LCD display:</p></div>
+        <img class="tier" src="../imgs/Synth Panel Design.png" style="width: 50%;height: 50%;"><br>
+
+        <h2>PCB?</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>PCB stands for Printed Circuit Board and it has a similar use case to a breadboard except it is custom manufactured where the electrical components are presoldered together. Part of why I chose to use this over a perfboard is because of how complex the schematic became.</p></div>
+
+        <h2>Basic needed components</h2>
+        <div class="text" style="font-size: 20px;">
+        <ul>
+            <li><b>Microcontroller</b>: The "brain", controls the rest of the board. User loads code directly onto this part</li>
+            <li><b>USB C 2.0</b>: Used to power the board</li>
+            <li><b>DAC</b>: Digital to Analog converter. Converts the digital signal from the microcontroller into something the amplifier can use.</li>
+            <li><b>LCD Display</b>: I would like to have nice UI for the user to look at</li>
+            <li><b>MIDI port</b>: Used to plug a MIDI piano in</li>
+            <li><b>Potentiometers</b>: Knobs for user input</li>
+            <li><b>Aux port</b>: For connection to speakers for audio out</li>
+            <li><b>Amplifier</b>: Make the signal from the DAC louder for audio output</li>
+        </ul></div>
+        <div class="text" style="font-size: 20px;">
+        <p>We will end up with the following structure:</p></div>
+        <img class="tier" src="../imgs/Digital Synth.png" style="width: 50%;height: 50%;"><br>
+
+        <h2>Microcontroller</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>I chose the STM32F407VETx as the microcontroller because:</p></div>
+        <div class="text" style="font-size: 20px;">
+        <ul>
+            <li>168 MHz clock which allows for complex math operations (like FFTs) on audio streams</li>
+            <li>Built in FPU significantly accelerates floating-point audio algorithms</li>
+            <li>Supports I&sup2;S, SPI, and USB, making it easy to interface with high-quality external ADCs/DACs</li>
+            <li>192 KB of SRAM and up to 1 MB of Flash for storing audio samples or delay buffer</li>
+            <li>DMA (Direct Memory Access) allows hardware subsystems to access main system memory (RAM) independently of the CPU</li>
+            <li>Internal DAC and ADC: The F407 features 12-bit internal DACs. I am only planning with a 44.1 kHz sample rate anyway, so it will work perfectly fine for my setup.</li>
+        </ul></div>
+
+        <h2>Power/Decoupling</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>A good practice is separating analog and digital power supplies. Analog circuits can be very sensitive and since digital signals switch on and off at extremely high speeds it can cause voltage spikes that can introduce an audible hum. I decided to completely separate the lines, including having two different LDOs for each.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>An LDO or Low Dropout Regulator is a DC linear voltage regulator that supplies a steady voltage. It does a fantastic job converting a higher voltage (5V from a USB) into a clean 3.3V needed to power the microcontroller. For the analog side I chose the LP5907MFX-3.3 and for the digital side I chose the AMS1117-3.3.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>As listed in the datasheet, the digital line requires one 4.7\mu capacitor and multiple (I chose 7 because other people used that much) 100n capacitors for decoupling while analog requires a 1\mu and 100n capacitor. This is used for reducing noise. Capacitors at its simplest stores and releases electrical energy, they're like small batteries. But they also can block DC current while allowing the noise to pass (to ground in our case).</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The VCAP pins are used as output pins for the microcontroller's internal LDO. It uses this to reduce the 3.3V to a lower one to power the CPU. All we have to do is add a 2.2\mu for each pulled down to ground.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>VDD is the main power supply for the chip's digital logic, I/O pins, and internal peripherals. VBAT is secondary power pin connected to a battery or supercapacitor used to power the Real-Time Clock (RTC) and backup registers when the main VDD is turned off. We don't have a battery so I connected both VBAT and VDD to the 3.3V digital rail. VDDA is the dedicated positive analog power supply pin that power the internal ADCs, DAC, and other analog circuits. I connected this to 3.3VA or the analog 3.3V rail.</p></div>
+
+        <h2>Reset/Boot</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The NRST pin is used for a manual reset of the processor. According to the datasheet it requires a 2.2\mu capacitor to ground and then a switch connected to ground. Internally it is connected to VDD, but just in case I connected it to 3.3V just in case.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The BOOT0 pin tells the chip where to look for code. If pulled low (0V) it boots normally from the main flash memory, where the user application is. If high (3.3V) the microcontroller boots from the system memory. This launches a built-in, unalterable bootloader that allows you to flash new firmware via interfaces like UART or USB without needing an external hardware programmer. It is pulled low here.</p></div>
+
+        <h2>Crystal</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>Crystal Oscillators are used by the MCU to provide clock signals and keep time based on the physical vibration of the crystal. The datasheet allows for a crystal from 4-26 MHz. We need one on the higher end since we are dealing with audio. I chose a 22.5792MHz one because it can be divided into the 44.1kHz sample rate we need. From the crystal's datasheet we can get its load capacitance. From this we can determine the value of the capacitor from the following formula:</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>$$C=2(C_L-C_{stray})$$</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>Where C_{stray} is the estimated PCB stray capacitance (2-3pF).</p></div>
+
+        <h2>USB-C 2.0</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>We are using a USB-C connector for both USB 2.0 data transfer and 5V power delivery to the circuit. The USB D+ and D&minus; pair is connected to the STM32 USB peripheral and is used for data communication between the host and the device.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The connector shield is connected to ground for EMI suppression and to provide a low-impedance return path for high-frequency noise.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The SBU1 and SBU2 pins are not used, since USB Alternate Modes (such as DisplayPort) are not required in this design. These pins are left unconnected.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The CC1 and CC2 pins are each connected to ground through a 5.1 k\ohm pull-down resistor (Rd), indicating that the device is operating as a USB sink. This allows the host to detect cable orientation and enables VBUS power delivery.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The VBUS pin provides the 5V supply from the USB, which is used to power the system.</p></div>
+
+        <h2>MIDI input</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>A female MIDI connector is actually very similar to the TRS (Tip Ring Sleeve) aux counterpart.</p></div>
+        <img class="tier" src="../imgs/Pasted image 20251104103620.png" style="width: 50%;height: 50%;"><br>
+        <div class="text" style="font-size: 20px;">
+        <p>They differ in their uses, the TRS cable is used for transferring audio data while MIDI is a protocol that sends notes, strike velocity, and duration. We have the following setup for connecting it to the MCU through an USART_RX pin. We have an LED diode that signals that it has been plugged in and an Optocoupler. What it does is transfer electric signals using light. In this case it provides galvanic isolation which protects the microcontroller from unwanted AC from flowing between them.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>USART stands for Universal Synchronous/Asynchronous Receiver-Transmitter. It allows for communication with other devices through serial protocols. A serial protocol transmit data one bit at a time sequentially over a single channel or wire. The TX pin is for transmission and the RX pin is for receiving. Since MIDI sends data one at a time, this makes it perfect for our usecase.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>Also, for future reference, MIDI out/thru ports do not require optocouplers at all.</p></div>
+        <img class="tier" src="../imgs/MIDI_IN.png" style="width: 50%;height: 50%;"><br>
+
+        <h2>MIDI Programming</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>MIDI basically works like a regular keyboard, by default the keys are in a key-off state but when pressed it goes into a key-on state which causes events to happen. Take a look at the below table (upper nibble is the first 4 bits in the byte):</p></div>
+        <table>
+            <tr><th>Message Type</th><th>Status Byte (upper nibble)</th><th>Data Byte 1</th><th>Data Byte 2</th><th>Description</th></tr>
+            <tr><td>Note On</td><td>0x90</td><td>Key # (i.e. middle C)</td><td>Velocity</td><td>Starts a note (pitch) with a certain force (volume/attack)</td></tr>
+            <tr><td>Note Off</td><td>0x80</td><td>Key #</td><td>Velocity</td><td>Stops a note. A Note On with Velocity 0 (00h) is often used instead.</td></tr>
+            <tr><td>Control Change</td><td>0xB0</td><td>Controller #</td><td>Controller Value</td><td>Changes an adjustable parameter (e.g., Modulation Wheel, Volume, Sustain Pedal).</td></tr>
+            <tr><td>Program Change</td><td>0xC0</td><td>Program #</td><td>None</td><td>Selects a new instrument sound (patch).</td></tr>
+            <tr><td>Pitch bend</td><td>0xE0</td><td>LSB</td><td>MSB</td><td>A 14-bit value for smooth pitch adjustments (center is 4000h).</td></tr>
+        </table>
+        <div class="text" style="font-size: 20px;">
+        <ul>
+            <li>How the MCU is going to see it is first the Status byte which will tell the MCU the message type
+                <ul><li>After this, it gets the two data bytes back to back</li></ul>
+            </li>
+            <li>The code for parsing said MIDI data will consist of this (basically):</li>
+        </ul></div>
+        <pre><code>
+void MIDI_ProcessByte(uint8_t data) {
+	static uint8_t status_byte = 0;
+	static int data_count = 0;
+	static uint8_t param1;
+
+	// Checks if you are getting a status signal)
+	if (data & 0x80) {
+		status_byte = data;
+		data_count = 0;
+	// for data byte
+	} else {
+		if (status_byte == 0) {
+		// ignore stray byte
+			return;
+		}
+
+		// remember: &amp; is the AND operator
+
+		// so 0xF0 is 11110000 in binary and here is used as a mask to get rid of the lower bits that don't matter in this case
+
+		uint8_t message_type = status_byte & 0xF0;
+
+	// note on || note off || CC || Pitch Bend
+
+		if (message_type == 0x90 || message_type == 0x80 || message_type == 0xB0 || message_type == 0xE0) {
+
+			if (data_count == 0) {
+				param1 = data;
+				data_count = 1; // wait for second data byte
+
+			} else if (data_count == 1) {
+				param2 = data;
+				if (message_type == 0x90) {
+					int note = param1;
+					int velocity = param2;
+					if (velocity > 0) {
+						Parse_Note(note, velocity);
+					} else {
+						Parse_Note_Off(note);
+					}
+				} else if (message_type == 0x80) {
+					int note = param1;
+					Parse_Note_Off(note);
+				}
+			}
+		}
+	}
+return note_play;
+}
+        </code></pre>
+
+        <h2>Audio Output Pipeline</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>Audio is generated digitally on the STM32 and then passed through an analog signal chain to produce a clean output. The synthesizer runs at a 44.1kHz sample rate (same as CDs), before conversion to an analog signal. The signal passes through four stages:</p></div>
+        <div class="text" style="font-size: 20px;">
+        <ol>
+            <li><b>Internal STM32 Digital to Analog Converter (DAC)</b>
+                <ul><li>The STM32's internal DAC converts each 44.1kHz digital sample into a corresponding analog voltage</li></ul>
+            </li>
+            <li><b>OPA2134 amplifier</b>
+                <ul>
+                    <li>The DAC output is fed into an OPA2134 op-amp, which acts as a preamp stage serving three purposes:
+                        <ul>
+                            <li>Impedance matching: the DAC output has a relatively high output impedance, and the OPA2134 buffers this down to drive later stages without signal loss or distortion</li>
+                            <li>Voltage Amplification: boosts the signal to a more usable line level before it reaches the headphone amp</li>
+                        </ul>
+                    </li>
+                    <li>There are DC-blocking/AC-coupling capacitors applied on the amp output. DC offset can ruin electronics that are made for alternating current (such as headphones)
+                        <ul><li>Speakers rely on the natural back-and-forth motion (AC) to stay cool. When a constant DC voltage is applied, the voice coil remains forcefully stationary while carrying constant current</li></ul>
+                    </li>
+                </ul>
+            </li>
+            <li><b>TPA6132A2 Headphone amplifier</b>
+                <ul>
+                    <li>The TPA6132A2 is a dedicated headphone amplifier. Headphones present a much lower impedance load than line-level inputs, so a separate high-current-drive stage is needed here to deliver enough power for clean playback at listening volumes.</li>
+                    <li>G0, G1, and EN are connected to MCU GPIO pins meant for configuring the amp. G0 and G1 pins are for Gain select and EN is for Amplifier Enable, if pulled low the amplifier shuts down, otherwise it is enabled.</li>
+                </ul>
+            </li>
+            <li><b>SJ1 female aux port</b>
+                <ul><li>The final analog output is routed to a standard 3.5mm aux jack (SJ1), where it can be connected to headphones or external speakers.</li></ul>
+            </li>
+        </ol></div>
+        <table style="margin:0 auto; width=50%;">
+            <tr><th>G0</th><th>G1</th><th>Gain Setting</th></tr>
+            <tr><td>Low</td><td>Low</td><td>-6 dB</td></tr>
+            <tr><td>Low</td><td>High</td><td>0 dB</td></tr>
+            <tr><td>High</td><td>Low</td><td>3 dB</td></tr>
+            <tr><td>High</td><td>High</td><td>6 dB</td></tr>
+        </table>
+        <div class="text" style="font-size: 20px;">
+        <p>In addition, the OPA2134 is a true audio op-amp, it requires a bipolar (dual-rail) supply which is why a negative voltage rail produced by the TPS604 is used.</p></div>
+
+        <h2>User Input</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>To get around this, the board uses two 16-channel analog multiplexers (MUXes). Each MUX takes 16 analog inputs and routes exactly one of them at a time to a single output line, selected via 4 digital control pins (S0&ndash;S3). With two MUXes running in parallel, the board can read up to 32 potentiometers. See below what values the pots are set to:</p></div>
+        <table>
+            <tr><th>MUX #</th><th>Channel #</th><th>Knob</th><th>Category</th><th>Description</th></tr>
+            <tr><td>1</td><td>I0</td><td>Release</td><td>Envelope</td><td>Sets the time it takes for the volume (or filter) to fade back to silence after the key is released.</td></tr>
+            <tr><td>1</td><td>I1</td><td>Pulse Width</td><td>Oscillator</td><td>Adjusts the duty cycle (on/off ratio) of the Pulse/Square wave, changing the tone from a square to a thin, nasal pulse</td></tr>
+            <tr><td>1</td><td>I2</td><td>Pitch</td><td>Oscillator</td><td>Fine-tunes the base frequency of the oscillator, typically over a ± one-octave range.</td></tr>
+            <tr><td>1</td><td>I3</td><td>Octave</td><td>Oscillator</td><td>Selects the register (pitch range) of the oscillator in whole octave steps.</td></tr>
+            <tr><td>1</td><td>I4</td><td>Resonance</td><td>Filter Controls</td><td>Boosts the frequencies right at the cutoff point which emphasizes the filter's effect, high settings can cause self-oscillation</td></tr>
+            <tr><td>1</td><td>I5</td><td>Cut off</td><td>Filter Controls</td><td>Sets the frequency point where the filter begins to reduce (or "cut off") upper harmonics.</td></tr>
+            <tr><td>1</td><td>I6</td><td>Type</td><td>Filter Controls</td><td>Selects the type of filter (e.g., Low-Pass, High-Pass, Band-Pass, Notch)</td></tr>
+            <tr><td>1</td><td>I7</td><td>Drive/Morph/Gain</td><td>Filter Controls</td><td>Adds overdrive or saturation before/after the filter, or morphs between different filter characteristics</td></tr>
+            <tr><td>1</td><td>I8</td><td>Wave</td><td>Oscillator</td><td>Selects the waveform (e.g., Sine, Saw, Square, Triangle, Noise) used by the oscillator.</td></tr>
+            <tr><td>1</td><td>I9</td><td>Type</td><td>Effects</td><td>Selects the type of effect algorithm (e.g., Delay, Reverb, Chorus, Flanger).</td></tr>
+            <tr><td>1</td><td>I10</td><td>Feedback</td><td>Effects</td><td>Controls how much of the effect's output is fed back into its input (e.g., number of delay repeats)</td></tr>
+            <tr><td>1</td><td>I11</td><td>Attack</td><td>Envelope</td><td>Sets the time it takes for the sound to reach its full volume after a key is pressed.</td></tr>
+            <tr><td>1</td><td>I12</td><td>Time</td><td>Effects</td><td>Sets the core timing of the effect (i.e. the length of the delay repeats or the size of the reverb space).</td></tr>
+            <tr><td>1</td><td>I13</td><td>Mix</td><td>Effects</td><td>Controls the wet/dry balance (the ratio between the unprocessed (dry) signal and the effected (wet) signal)</td></tr>
+            <tr><td>1</td><td>I14</td><td>Decay</td><td>Envelope</td><td>Sets the time it takes for the volume to drop from the peak (Attack) to the sustained volume (Sustain)</td></tr>
+            <tr><td>1</td><td>I15</td><td>Sustain</td><td>Envelope</td><td>Sets the level at which the sound holds while the key remains pressed (after the Attack/Decay phases).</td></tr>
+            <tr><td>2</td><td>I0</td><td>Glide</td><td>General</td><td>Controls the speed at which the pitch smoothly slides from one note to the next (portamento).</td></tr>
+            <tr><td>2</td><td>I1</td><td>Pan</td><td>General</td><td>Adjusts the overall position of the sound between the left and right stereo channels.</td></tr>
+            <tr><td>2</td><td>I2</td><td>Master Volume</td><td>General</td><td>Controls the final output level of the entire synthesizer.</td></tr>
+            <tr><td>2</td><td>I3</td><td>Octave</td><td>Arpeggiator</td><td>Sets the range of octaves the arpeggiated sequence spans.</td></tr>
+            <tr><td>2</td><td>I4</td><td>Control Knob</td><td>General</td><td>A user-assignable knob that can be mapped to any internal parameter not already covered.</td></tr>
+            <tr><td>2</td><td>I5</td><td>Swing</td><td>Arpeggiator</td><td>Shifts the timing of every other note to create a rhythmic "shuffle" or groove.</td></tr>
+            <tr><td>2</td><td>I6</td><td>Mode</td><td>Arpeggiator</td><td>Selects the direction of the arpeggiated notes (i.e., Up, Down, Up/Down, Random)</td></tr>
+            <tr><td>2</td><td>I7</td><td>Fade</td><td>LFO</td><td>Controls the time it takes for the LFO's modulation effect to reach its full Mod Amount depth</td></tr>
+            <tr><td>2</td><td>I8</td><td>Division</td><td>Arpeggiator</td><td>Sets the speed of the arpeggiated notes, usually in beat-synced values (e.g., 1/4 note, 1/8 note)</td></tr>
+            <tr><td>2</td><td>I9</td><td>Type</td><td>LFO</td><td>Selects the waveform of the Low-Frequency Oscillator (e.g., Sine, Triangle, Square, Random)</td></tr>
+            <tr><td>2</td><td>I10</td><td>Rate</td><td>LFO</td><td>Sets the speed or frequency of the LFO's cycle (how fast the modulation occurs).</td></tr>
+            <tr><td>2</td><td>I11</td><td>Unison</td><td>Modulation</td><td>Stacks and detunes multiple voices per note to create a very thick, wide, and 'fat' sound.</td></tr>
+            <tr><td>2</td><td>I12</td><td>Pitch</td><td>LFO</td><td>Controls the depth of the LFO's effect specifically on the oscillator's pitch (vibrato).</td></tr>
+            <tr><td>2</td><td>I13</td><td>FX Send</td><td>Modulation</td><td>Controls the amount of the main signal routed to the shared global effects unit (e.g., dedicated Reverb/Delay amount).</td></tr>
+            <tr><td>2</td><td>I14</td><td>Spread</td><td>Modulation</td><td>Pans the multiple stacked voices across the stereo field to create a greater sense of spatial width.</td></tr>
+            <tr><td>2</td><td>I15</td><td>Mod Amount</td><td>Modulation</td><td>Sets the overall intensity/depth of the LFO's effect on its assigned parameter (excluding dedicated Pitch control).</td></tr>
+        </table>
+        <div class="text" style="font-size: 20px;">
+        <p>Rather than having the STM32 poll each channel manually, the ADC is configured to read both MUX outputs and hand results off via DMA (Direct Memory Access). This means the ADC can complete a conversion and transfer the result into memory without CPU intervention which frees the MCU to spend its cycles on audio synthesis instead. Once a conversion completes, HAL_ADC_ConvCpltCallback fires, values are stored, and the MUX select lines are advanced to the next channel for the following read.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>Because both MUXes are read together on each conversion cycle, one ADC conversion yields two knob values at once. One from MUX A and one from MUX B on the same channel index. This is why knob_values is indexed as current_mux_channel * 2 + 0 and current_mux_channel * 2 + 1: each pair corresponds to the same selector position on both MUXes. Below is some code written to read the knob values:</p></div>
+        <pre><code>
+void select_knob(int num_mux, int knob_num) {
+	if (num_mux == 0) {
+		HAL_GPIO_WritePin(S0_1_PORT, S0_1_PIN, (knob_num & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S1_1_PORT, S1_1_PIN, (knob_num & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S2_1_PORT, S2_1_PIN, (knob_num & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S3_1_PORT, S3_1_PIN, (knob_num & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+	} else if (num_mux == 1) {
+		HAL_GPIO_WritePin(S0_2_PORT, S0_2_PIN, (knob_num & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S1_2_PORT, S1_2_PIN, (knob_num & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S2_2_PORT, S2_2_PIN, (knob_num & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(S3_2_PORT, S3_2_PIN, (knob_num & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	}
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	if (hadc->Instance == ADC2) {
+		knob_values[current_mux_channel * 2 + 0] = adc_dma_buffer[0];
+		knob_values[current_mux_channel * 2 + 1] = adc_dma_buffer[1];
+		current_mux_channel = (current_mux_channel + 1) % NUM_MUX_CHANNELS;
+		select_knob(0, current_mux_channel);
+		select_knob(1, current_mux_channel);
+	}
+}
+        </code></pre>
+        <div class="text" style="font-size: 20px;">
+        <p>We also have Select and Menu buttons as well. They are pulled up to 3.3V and debouncing is handled in code.</p></div>
+
+        <h2>LCD Display</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>For the user interface, the board uses an NHD-C12832A1Z-FSW-FBW-3V3 which is a 128&times;32 pixel monochrome graphic LCD. This gives enough resolution to show waveform previews, parameter values, and menu navigation without needing a full color display.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>The display is driven over Serial Peripheral Interface (SPI). SPI uses a "master-slave" architecture, where one primary device (the master) controls the communication and timing. It relies on four main signal lines:</p></div>
+        <div class="text" style="font-size: 20px;">
+        <ul>
+            <li><b>SCLK</b> (Serial Clock): The synchronization clock generated by the master.</li>
+            <li><b>MOSI</b> (Master Out, Slave Input): The line used to send data from the master to the slave.</li>
+            <li><b>MISO</b> (Master In, Slave Output): The line used by the slave to send data back to the master.</li>
+            <li><b>CS / SS</b> (Chip Select / Slave Select): The line the master uses to activate or select a specific slave device.</li>
+        </ul></div>
+        <div class="text" style="font-size: 20px;">
+        <p>This display is write-only, so MISO isn't used/connected here.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>Alongside these is the A0 pin, which tells the display's internal controller whether the incoming byte is a command (like "clear the screen" or "set cursor position") or data (actual pixel content to display).</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>RES is a hardware reset line for the display controller, letting the MCU force the display back to a known state on startup. This is useful since a display can end up in a bad state if power sequencing isn't clean.</p></div>
+
+        <h2>Putting it all together</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>Below is the full schematic for the board:</p></div>
+        <img class="tier" src="../imgs/schematic_page1.png" style="width: 90%;height: 90%;"><br>
+        <img class="tier" src="../imgs/schematic_page2.png" style="width: 90%;height: 90%;"><br>
+        <img class="tier" src="../imgs/schematic_page3.png" style="width: 90%;height: 90%;"><br>
+    </body>
+    <script defer src="../javascript/main.js"></script>
+</html>
