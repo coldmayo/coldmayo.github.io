@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>All About Hard Drives</title>
+        <link rel="icon" type="image/png" href="../imgs/avatar_mayo.jpeg"/>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/navMenu.css">
+        <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+        </script>
+        <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    </head>
+    <body>
+        <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span><br>
+        <h1>All About Hard Drives</h1>
+        <h3 style="text-align: center;"></h3>
+        <div class="text" style="font-size: 20px;">
+        <p>While working on making the Klaud File System persistent for my <a href="https://github.com/coldmayo/KlaudOS">OS project</a> I had to do some research on hard drives and making their drivers. I originally built an ATA driver, completely forgot that my OS currently boots off a floppy image, and ended up having to pivot to write a Floppy Disk Controller (FDC) driver instead. I thought I'd share what I learned so I don't feel the information is useless.</p></div>
+        <div class="text" style="font-size: 20px;">
+        <p>A hard drive is a physical storage medium used by a computer and retains information even when the computer is off. There are two main types:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li><b>Hard Disk Drives (HDD)</b>: Mechanical drives that use rapidly spinning magnetic platters and moving read/write heads to access data.</li>
+        <li><b>Solid State Drives (SSD)</b>: Non-mechanical drives that store data using flash memory chips. Since they have no moving parts, SSDs are significantly faster, more durable, and more energy-efficient than HDDs.</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>In this article we will be discussing HDDs, specifically.</p></div>
+
+        <h2>HDD Hardware</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>Below is a representation of an HDD and its parts:</p></div>
+        <img class="tier" src="../imgs/hdd_anatomy.png" style="width: 50%;height: 50%;"><br>
+
+        <h2>Platter</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The platters are circular disks where data is stored, read, and written from. A typical drive features multiple platters stacked vertically on a central spindle. They are typically made of aluminum, glass, or ceramic substrates coated with a magnetic thin-film layer. Data is stored as 1's and 0's by altering the polarity of the microscopic grains within the magnetic layer. The surface is organized into sectors, tracks, and cylinders. Tracks are circular rings around the platter, sectors are smaller sections of tracks typically in the size of 512 bytes, though modern drives predominantly use Advanced Format (4KB) sectors, and cylinders are a vertical stack of identical tracks across all platters.</p></div>
+        <img class="tier" src="../imgs/hdd_platter_geometry.png" style="width: 50%;height: 50%;"><br>
+        <div class="text" style="font-size: 20px;">
+        <p>Because outer tracks have a much larger circumference than inner tracks, modern drives use Zone Bit Recording (ZBR). Instead of wasting space, ZBR groups tracks into zones. The mechanical spindle motor spins at a fixed speed (Constant Angular Velocity), meaning the outer edge flies past the head much faster than the center. To maximize storage, outer zones contain more sectors and the drive controller dynamically increases the read/write channel clock speed when working on the outer edges to handle the higher data rate.</p></div>
+
+        <h2>Spindle</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The spindle holds all of the platters in place. A high-precision DC motor spins the spindle and platters at 5400 or 7200 RPM for consumer products and up to 10,000 or 15,000 RPM for enterprise servers.</p></div>
+
+        <h2>Actuator &amp; Actuator Arm</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The Actuator Arm is the mechanical assembly that swings the read/write heads across the surfaces of the spinning platters. In a multi-platter drive, a stack of arms moves in perfect unison to access both the top and bottom sides of every platter surface.</p></div>
+        <div class="text" style="font-size: 20px;"><p>The arm is driven by a Voice Coil Motor (VCM). Utilizing a permanent magnet and a copper wire coil, the VCM uses Lorentz force (the same physics that drive an audio loudspeaker) to swing the arm with incredible speed.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Because modern data tracks are impossibly narrow, drives often pair the VCM with a Dual-Stage Actuator (DSA). The DSA adds a microscopic piezoelectric (something that generates electric charge) element right at the suspension tip of the arm, providing an ultra-fine secondary adjustment. To keep the head locked on target, the drive relies on a continuous stream of Position Error Signals (PES), which are specialized magnetic marks pre-written onto the platter that instantly tell the controller if the head is drifting off-center.</p></div>
+
+        <h2>Read and Write Heads</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The read and write heads are located at the very tip of the actuator arm. They never actually touch the platter surface; doing so would damage the disk. Instead, the rapid rotation of the platter creates a microscopic cushion of air, allowing the heads to fly 3 to 6 nanometers above the surface.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Modern drives split reading and writing into completely distinct physical components on the head:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li><b>GMR Sensors</b>: Consists of two ferromagnetic layers separated by a thin, conductive, non-magnetic copper spacer. The pinned layer has a fixed magnetic orientation, while the free layer rotates freely to align with the platter's magnetic bits. When the layers are parallel, electrons pass through with minimal scattering (low resistance). When anti-parallel, electron scattering spikes (high resistance). This difference in intensity translates directly to binary data.</li>
+        <li><b>TMR Sensors</b>: TMR replaces the conductive copper spacer with an ultra-thin insulating barrier. Instead of traveling through a metal, electrons use quantum tunneling to go through the insulator. TMR provides a massive change in electrical resistance compared to GMR, allowing it to easily read the incredibly weak magnetic fields produced by dense modern platters.</li>
+        <li><b>Thin-Film Write Heads</b>: While TFI technology used to handle both reading and writing back in the day, it is now reserved strictly for writing. A TFI head uses a microscopic copper coil wrapped around a magnetic core. Flooding the coil with electrical current creates a localized magnetic field at the pole tip, flipping the atoms in the platter's grains to point north or south (representing a 1 or a 0).</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>In the 2000s, engineers were trying to come up with new ways to get more storage in drives. The obvious thought would be to shrink the magnetic grains. But they found out that eventually they hit the "superparamagnetic limit," or when they're too small they became so unstable that they would randomly flip due to heat, causing data loss. Perpendicular Magnetic Recording (PMR) solved this by flipping the magnetic bits to stand vertically (perpendicular to the platter) rather than laying flat. This structural change drastically reduced magnetic interference between adjacent bits and allowed manufacturers to pack data much tighter.</p></div>
+        <div class="text" style="font-size: 20px;"><p>From PMR, two commercial tracking methods branched out:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li><b>CMR (Conventional Magnetic Recording)</b>: Writes data onto independent parallel tracks separated by empty guard bands. This allows the drive to instantly overwrite any individual sector without impacting its neighbors. It is the gold standard for high performance in NAS systems and servers.</li>
+        <li><b>SMR (Shingled Magnetic Recording)</b>: Because physical write heads are wider than read heads, SMR overlaps data tracks like shingles on a roof to squeeze out extra capacity. The drive leaves behind a tightly packed track perfectly sized for a narrow TMR read head. The downside? If you modify a sector, writing to that track will ruin the data on the overlapping track next to it. The drive has to read an entire zone into a cache and rewrite the whole block, resulting in massive write slowdowns during heavy tasks. SMR is strictly ideal for cheap, cold archival storage.</li></ul></div>
+        <img class="tier" src="../imgs/cmr_vs_smr.png" style="width: 50%;height: 50%;"><br>
+
+        <h2>Controller</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>The Printed Circuit Board (PCB) bolted to the bottom of the drive is like the control station. When you save a file, the controller calculates the physical coordinates, applies Write Precompensation (shifting the timing of the write pulses by picoseconds to counteract physical bit repulsion on the platter), and drives the VCM current.</p></div>
+        <div class="text" style="font-size: 20px;"><p>When reading, the head detects resistance fluctuations from the platter's magnetic transitions. The logic board takes this messy, overlapping analog waveform and passes it through PRML (Partial-Response Maximum-Likelihood) digital signal processing. PRML uses probability matrices to determine the most likely sequence of binary bits hidden inside the fuzzy analog signal, cleanly converting it back to digital data before sending it down the SATA or SAS bus to your CPU and RAM.</p></div>
+
+        <h2>Drive Interfaces</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>A Hard Drive Interface connects the drive to the computer's motherboard. The main types are:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li><b>NVMe/M.2</b>: Modern standard</li>
+        <li><b>SATA</b>: Common legacy and mainstream interface for internal hard drives and 2.5-inch SSDs</li>
+        <li><b>IDE (ATA, PATA)</b>: An obsolete interface using wide ribbon cables</li>
+        <li><b>SAS</b>: Enterprise-grade interfaces built for heavy-duty, continuous server operations</li>
+        <li><b>USB/Thunderbolt</b>: Used for external hard drives</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>If you are looking to build an OS, you will likely need to make drivers to communicate with these interfaces which can then communicate to the disk once you are in 32 bit protected mode. Before then (real mode) you will be able to use real interrupts (INT 13h) to write and read to disk. I will cover what it takes to make drivers for ATA (or PATA) and go more into depth with SATA.</p></div>
+
+        <h2>ATA</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>A standard PC motherboard can support two ATA channels (Primary and Secondary) each capable of hosting two drives (Master and Slave). What's funny about the names "master" and "slave" drives is that neither of them are above or below each other in either way. They are simply distinct names for 2 drives.</p></div>
+        <div class="text" style="font-size: 20px;"><p>The Primary and Secondary ATA are controlled by ports 0x1F0 through 0x1F7, and 0x170 through 0x177, with control registers at 0x3F6 and 0x376, respectively. In legacy interfaces like FDC relied on an external ISA DMA controller chip while ATA uses PIO which makes the CPU do the heavy lifting. The CPU reads data straight from the hard drive controller's internal buffer, 16 bits at a time.</p></div>
+
+        <div class="text" style="font-size: 20px;">
+        <table style="width:100%; border-collapse: collapse;" border="1" cellpadding="6">
+        <tr><th>Offset from base</th><th>Direction</th><th>Function</th><th>Description</th><th>Parameter Size</th></tr>
+        <tr><td>0</td><td>R/W</td><td>Data Register</td><td>Read/Write PIO data bytes</td><td>16-bit/16-bit</td></tr>
+        <tr><td>1</td><td>R</td><td>Error Register</td><td>Used to retrieve any error generated by the last ATA command executed.</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>1</td><td>W</td><td>Features Register</td><td>Used to control command specific interface features.</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>2</td><td>R/W</td><td>Sector Count Register</td><td>Number of sectors to read/write (0 is a special value).</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>3</td><td>R/W</td><td>Sector Number Register (LBA-low)</td><td>This is CHS / LBA28 / LBA48 specific.</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>4</td><td>R/W</td><td>Cylinder Low Register / (LBA-mid)</td><td>Partial Disk Sector address.</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>5</td><td>R/W</td><td>Cylinder High Register / (LBA-High)</td><td>Partial Disk Sector address.</td><td>8-bit / 16-bit</td></tr>
+        <tr><td>6</td><td>R/W</td><td>Drive / Head Register</td><td>Used to select a drive and/or head. Supports extra address/flag bits.</td><td>8-bit / 8-bit</td></tr>
+        <tr><td>7</td><td>R</td><td>Status Register</td><td>Used to read the current status.</td><td>8-bit / 8-bit</td></tr>
+        <tr><td>7</td><td>W</td><td>Command Register</td><td>Used to send ATA commands to the device.</td><td>8-bit / 8-bit</td></tr>
+        </table>
+        </div>
+
+        <div class="text" style="font-size: 20px;">
+        <p>Logical Block Addressing (LBA): Layer of abstraction to make it easier to identify and access data blocks (sectors) on storage devices. Before, systems used CHS (Cylinder-Head-Sector) addressing which required the software to specify the exact physical track, disk head, and sector. As time went on, HDDs and SSDs have more complex geometries and differing sector sizes. LBA allows for the OS to reference data sequentially (first sector is 0, next is 1, etc) which is so much easier to write. What I am describing is LBA28 (drive-select byte carrying 4 address bits, 0x20 command) and has a limit of $2^{28}=268,435,456$ data sectors (or 128 GB), for larger drives LBA48 exists with a limit of 144 PB.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Reading a sector using LBA:</p></div>
+        <div class="text" style="font-size: 20px;"><ol>
+        <li><b>Select the Drive</b>: Send a byte specifying whether you want the Master or Slave drive, and set the addressing mode to LBA</li>
+        <li><b>400ns Delay</b>: It is needed to read the status register four times to give the drive enough time to physically settle itself.</li>
+        <li><b>Set Sector Count</b>: Write the number of sectors you want to read</li>
+        <li><b>Write LBA Coordinates</b>: Send the target LBA address across the LBA-Low, LBA-Mid, and LBA-High ports.</li>
+        <li><b>Identify Device</b>: Finds whether to use LBA28 or LBA48 command variants by reading bit 10 in word 83</li>
+        <li><b>Issue the Read Command</b>: Write the command byte 0x20</li>
+        <li><b>Poll or Wait for Interrupt</b>: Wait for the drive to drop the BUSY bit and set the DRQ (Data Request) bit. In a real OS, you yield the CPU and wait for IRQ 14 (Primary Channel) or IRQ 15 (Secondary Channel)</li>
+        <li><b>Pull the Data</b>:  Run a loop using the assembly instruction insw (Input String Word) to read 256 words (512 bytes) out of the data port directly into your OS memory buffer.</li>
+        </ol></div>
+
+        <h2>SATA</h2>
+        <div class="text" style="font-size: 20px;">
+        <p>SATA or Serial Advanced Technology Attachment transmits data serially over a single cable where ATA sends information in parallel across multiple lines. But other than that most of the commands are still the same: like 0x20 for Read, 0x30 for Write, or 0xEC for Identify Drive. Another interesting difference is that SATA uses exclusively DMA for data transfers. Part of what makes DMA so amazing is the fact that it can pass data without CPU intervention.</p></div>
+
+        <h2>Sources</h2>
+
+        <div class="text" style="font-size: 20px;"><ul>
+        <li>ATA driver: <a href="https://github.com/coldmayo/KlaudOS/blob/main/src/kernel/libs/ata_driver.c">https://github.com/coldmayo/KlaudOS/blob/main/src/kernel/libs/ata_driver.c</a></li>
+        <li>FDC driver: <a href="https://github.com/coldmayo/KlaudOS/blob/main/src/kernel/libs/fdc.c">https://github.com/coldmayo/KlaudOS/blob/main/src/kernel/libs/fdc.c</a></li>
+        <li><a href="https://www.lazarusdatarecovery.com/blog/anatomy-of-a-hard-drive">https://www.lazarusdatarecovery.com/blog/anatomy-of-a-hard-drive</a></li>
+        <li><a href="https://blog.stuffedcow.net/2019/09/hard-disk-geometry-microbenchmarking/">https://blog.stuffedcow.net/2019/09/hard-disk-geometry-microbenchmarking/</a></li>
+        <li><a href="https://en.wikipedia.org/wiki/Giant_magnetoresistance">https://en.wikipedia.org/wiki/Giant_magnetoresistance</a></li>
+        <li><a href="https://en.wikipedia.org/wiki/Tunnel_magnetoresistance">https://en.wikipedia.org/wiki/Tunnel_magnetoresistance</a></li>
+        <li><a href="https://buffaloamericas.com/resources/cmr-vs-smr-hard-drives-in-network-attached-storage-nas-msp">https://buffaloamericas.com/resources/cmr-vs-smr-hard-drives-in-network-attached-storage-nas-msp</a></li>
+        <li><a href="https://wiki.osdev.org/ATA_PIO_Mode">https://wiki.osdev.org/ATA_PIO_Mode</a></li>
+        <li><a href="https://wiki.osdev.org/SATA">https://wiki.osdev.org/SATA</a></li>
+        <li><a href="http://www.osdever.net/tutorials/view/lba-hdd-access-via-pio">http://www.osdever.net/tutorials/view/lba-hdd-access-via-pio</a></li>
+        </ul></div>
+    </body>
+    <script defer src="../javascript/main.js"></script>
+</html>
