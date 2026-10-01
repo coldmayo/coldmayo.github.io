@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Building a Beowulf Cluster: Part 1</title>
+        <link rel="icon" type="image/png" href="../imgs/avatar_mayo.jpeg"/>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/navMenu.css">
+        <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+        </script>
+        <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
+    </head>
+    <body>
+        <span style="float: right;" onclick="dark()"><img id="icon" style="height: 20px; width: 20px;cursor:url('../cursors/gam874.cur'), auto;" src="imgs/moon.png"></span><br>
+        <h1>Building a Beowulf Cluster: Part 1</h1>
+        <h3 style="text-align: center;"></h3>
+        <div class="text" style="font-size: 20px;">
+        <p>A Beowulf cluster is a high performance computing system consisting of consumer grade technology which are linked by a local network that executes parallel jobs. It works by having a (usually single) head node to manage and distribute parallel computations and the compute nodes executing them. This is a fun way to reuse old electronics and learn new things. All you need is:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>2 or more computers</li>
+        <ul><li>1 has to be the head node, the rest are compute nodes</li></ul>
+        <li>1 Network switch</li>
+        <li>1+number of computers Ethernet cords</li>
+        <li>1 Thumb drive</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>Michigan State has the Surplus Store which sells a ton of second hand things including PCs/workstations, cords, networking gear, etc if you want electronics for cheap.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Below is what my cluster currently looks like, ignore the bad cable management:</p></div>
+        <img class="tier" src="../imgs/cluster.jpg" style="width: 50%;height: 50%;"><br>
+        <div class="text" style="font-size: 20px;"><p>The network switch I am using is the Netgear GS308 because it has 8 ports, which is way more than I need. This allows me to expand later if I ever need more nodes. One of the nodes I know for sure is a Dell Optiplex 3020 with an i5 with 3 available cores. The other 2 are probably some Dell Precision model also with an i5 with 3 cores. Hardware is a huge bottleneck here since these things only support up to 16GB of DDR3 RAM. Someday I will replace the motherboard, RAM and CPU of the head node at least. I'll be honest, I only made these the nodes because they were under $60 at the Surplus Store.</p></div>
+        <div class="text" style="font-size: 20px;"><p>In terms of software, I used Rocky Linux as my Operating System. When I previously did this I used CentOS 10 Stream, but I wanted to try something else out. You can use any type of enterprise Linux distribution, really. For job allocation, we are installing my very own <a href="https://github.com/coldmayo/KlaudScheduler" target="_blank">KlaudScheduler</a> which depends on OpenMPI.</p></div>
+
+        <h2>Basic Node Setup</h2>
+        <div class="text" style="font-size: 20px;"><p>The following are instructions needed for both the head node and the compute nodes.</p></div>
+        <div class="text" style="font-size: 20px;"><p>First install Rocky Linux on all of them using the thumb drive as a bootable medium. I personally like to use balenaEtcher for flashing OS images. I would recommend using the following options:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>Head Node: Server with GUI</li>
+        <li>Compute Nodes: Minimal Install</li>
+        <li>All: Enable Root User</li>
+        <li>Do not make user accounts yet</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>Connect the Ethernet cables to each node and then to the network switch. Connect one of the cords from the switch to the router. This ensures you can connect all of the devices to the local network.</p></div>
+        <div class="text" style="font-size: 20px;"><p>After the install make user accounts: alice and master. You can do this using the commands below:</p></div>
+<pre><code>sudo useradd master
+sudo passwd master
+
+sudo useradd alice
+sudo passwd alice
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>master will be used for administrative purposes and alice will be a standard user account. This will matter more when we get permissions squared away. You need the same account on all nodes because OpenMPI uses SSH for starting processes under the identity of the user submitting the job. Make sure the UIDs are the same across nodes to maintain file ownership and permissions. You can edit UIDs with the following command:</p></div>
+<pre><code>sudo usermod -u NEW_UID USERNAME
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Then, install the following packages:</p></div>
+<pre><code>sudo dnf install nfs-utils gcc gcc-c++ gdb make openmpi openmpi-devel
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>OpenMPI also comes with the package for environment modules as well. To activate both we need to enter the following commands:</p></div>
+<pre><code>source /etc/profile.d/modules.sh
+module load mpi/openmpi-x86_64
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Then to make sure you append these commands to your ~/.bashrc to ensure they get run on startup.</p></div>
+
+        <h3 style="text-align: center;">Enable Static IPs</h3>
+        <div class="text" style="font-size: 20px;"><p>A Static IP address is a permanent address used to access and identify computers. You can have one for public web usage assigned to your router and a local one for single devices on your home network. Specifically, we are looking to edit the local static IP, the one in the 192.168.x.x range. This is more of a me thing, but I like setting mine to 192.168.x.100, 101, ..., 10n for the head and compute nodes. Make sure you set the IPs to the correct range or it will mess up your wifi. Also, make sure you use ones that are out of your router's DHCP pool, or the router may hand the same address to another device. Enter the following command:</p></div>
+<pre><code>sudo nmcli con mod CONNECTION_NAME ipv4.method manual ipv4.addresses 192.168.x.10n/24
+</code></pre>
+<pre><code>ipv4.gateway 192.168.x.1 ipv4.dns "8.8.8.8,1.1.1.1" connection.autoconnect yes
+</code></pre>
+        <div class="text" style="font-size: 20px;"><ul><li>192.168.x.10n/24 is what we are setting the static IP to</li>
+        <li>192.168.x.1 is the IP gateway</li>
+        <ul><li>The wifi router is the gateway that connects your computer to wifi access. Your devices send data to the router using the IP gateway.</li></ul>
+        <li>8.8.8.8 and 1.1.1.1 are public DNS resolvers</li>
+        <ul><li>A DNS or a Domain Name System changes website names into numbers readable by computers</li>
+        <li>The 1.1.1.1 DNS is provided by Cloudflare and people say it's the fastest one</li>
+        <li>8.8.8.8 is provided by Google</li></ul></ul></div>
+        <div class="text" style="font-size: 20px;"><p>Now you can edit this in nmtui which provides a way better UI:</p></div>
+<pre><code>sudo nmtui
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Then click "Edit a Connection" and select: "require IPv4 addressing for this connection". Restart the node or the wifi to see the changes, then use:</p></div>
+<pre><code>ip addr show
+ping google.com
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>to see if the changes applied and that your wifi still works.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Edit the /etc/hosts file to make aliases for the IPs instead of having to type out the whole thing each time. Do this for every node. This is what mine looks like:</p></div>
+<pre><code>192.168.0.100 master
+192.168.0.101 node1
+192.168.0.102 node2
+</code></pre>
+
+        <h2>Passwordless SSH and shared storage</h2>
+        <div class="text" style="font-size: 20px;"><p>The following instructions are done only for the head node.</p></div>
+        <div class="text" style="font-size: 20px;"><p>We need to enable passwordless ssh between the accounts on the master with the other nodes. I'm sure you don't want to have to log into a bunch of accounts each time you run a job.</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>For example: master@headnode -&gt; master@node1, master@headnode -&gt; master@node2, ..., master@headnode -&gt; master@noden</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>Do the following commands on the head node to enable this:</p></div>
+<pre><code>su - master
+ssh-keygen -t ed25519
+ssh-copy-id master@node1
+ssh-copy-id master@node2
+...
+ssh-copy-id master@noden
+
+su - alice
+ssh-keygen -t ed25519
+ssh-copy-id alice@node1
+ssh-copy-id alice@node2
+...
+ssh-copy-id alice@noden
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>We need a way to share storage across devices so the nodes can see and execute each others files. A Network File System or NFS is a great way to do this, it's a networking protocol that lets you access and manage files on a remote computer as if they were stored on your own local computer. To actually set it up first enable/start the system:</p></div>
+<pre><code>sudo systemctl enable --now nfs-server
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>We need to make a home directory that contains contents from the master and alice accounts (and more future accounts):</p></div>
+<pre><code>sudo mkdir -p /home
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>We need to edit the /etc/exports file to allow this directory to be shared on the local network. Append the following to it:</p></div>
+<pre><code>/home node1(rw,sync) node2(rw,sync) ... noden(rw,sync)
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Apply the changes and check if it works:</p></div>
+<pre><code>sudo exportfs -rav
+sudo exportfs -v
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>If you see /home show up you're all good. You can also give the NFS a firewall:</p></div>
+<pre><code>sudo firewall-cmd --permanent --add-service=nfs
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-services
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>If you see nfs printed after list-services you're all good, although you might need a reboot.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Now for all of the compute nodes do the following to configure NFS. First make the /home mount point if you don't have it already:</p></div>
+<pre><code>sudo mkdir -p /home
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Test the mount:</p></div>
+<pre><code>sudo mount -t nfs master:/home /home
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>To make this mount persistent you need to add it to the /etc/fstab file. Append this to the file:</p></div>
+<pre><code>master:/home /home nfs defaults,_netdev,nofail 0 0
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Reboot the system to see if it works and to further test add a file in alice's directory on the head node and see if it's there on each node. If this works we are ready for the job scheduler.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Run this on compute nodes if SSH key login fails from the NFS home. Rocky Linux enforces SELinux by default.</p></div>
+<pre><code>sudo setsebool -P use_nfs_home_dirs 1
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Make sure that mpi is working correctly with ssh with the following command:</p></div>
+<pre><code>mpirun -np 4 --host node1,node2 hostname
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>If this does not work, consider turning the NFS firewall off. This is a home Beowulf cluster, how likely is it that someone attacks you?</p></div>
+
+        <h3 style="text-align: center;">KlaudScheduler</h3>
+        <div class="text" style="font-size: 20px;"><p>A cluster scheduler manages and distributes computing resources between multiple jobs, the most popular being SLURM. <a href="https://github.com/coldmayo/KlaudScheduler" target="_blank">KlaudScheduler</a> is the one I made, so I'll walk through how to set that up.</p></div>
+        <div class="text" style="font-size: 20px;"><p>Clone the git repo:</p></div>
+<pre><code>git clone https://github.com/coldmayo/KlaudScheduler.git
+cd KlaudScheduler
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Create the ~/.klaudrc file and copy this in it, remember to do this for each account:</p></div>
+<pre><code># Set priority system
+# Options: FIFO, SJF, BF
+set-priority FIFO
+set-priority-lottery false
+set-priority-aging true
+# For populating nodes.json, specify TCP or SSH
+# If your ISP blocks IP forwarding, use SSH (recommended)
+set-nodes-strat SSH
+set-dir /set/working/directory
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Run the Makefile in the headNode directory to create the needed executables:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>dispatch</li>
+        <ul><li>Used for resource distribution</li></ul>
+        <li>get-nodes</li>
+        <ul><li>Running this generates rankfile.txt and nodes.json</li></ul>
+        <li>klaudrun</li>
+        <ul><li>Used to run a job</li></ul>
+        <li>ktrack</li>
+        <ul><li>System maintenance</li></ul></ul></div>
+        <div class="text" style="font-size: 20px;"><p>This Makefile installs them directly to /usr/local/bin so these become system-wide executables.</p></div>
+        <div class="text" style="font-size: 20px;"><p>To start the scheduler up first run the get-nodes command to generate nodes.json and the rankfile.txt</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>rankfile.txt is a file that maps processes (or ranks) to cpus across the cluster</li>
+        <li>nodes.json is a file that contains the names of all CPUs and their status (if they're free or not)</li></ul></div>
+        <div class="text" style="font-size: 20px;"><p>Then you have to run the dispatcher using the dispatch command. Now you can use klaudrun to submit jobs. You can use .klaud files to do so or just use the .c executable with the comments</p></div>
+<pre><code>klaudrun --file=pingus.klaud
+klaudrun --num_cores=6 --command="./hello_mpi"
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>Now you should be good to run computations yourself!</p></div>
+        <div class="text" style="font-size: 20px;"><p>In the future, I plan on configuring permissions, usergroups, benchmarking, updating hardware, and more.</p></div>
+
+        <h2>Other Considerations</h2>
+        <div class="text" style="font-size: 20px;"><p>To execute C code that uses MPI you must compile using mpicc instead of gcc, for example:</p></div>
+<pre><code>mpicc examples/hello_mpi.c -o examples/hello_mpi
+</code></pre>
+        <div class="text" style="font-size: 20px;"><p>If you are concerned with the head node turning off if idling:</p></div>
+        <div class="text" style="font-size: 20px;"><ul><li>This is Gnome only, only works if your OS install had a GUI</li></ul></div>
+<pre><code># Disable idle delay (set to 0 for never)
+gsettings set org.gnome.desktop.session idle-delay 0
+
+# Disable automatic screen locking
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+</code></pre>
+    </body>
+    <script defer src="../javascript/main.js"></script>
+</html>
