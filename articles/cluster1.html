@@ -142,7 +142,7 @@ sudo firewall-cmd --list-services
 </code></pre>
         <div class="text" style="font-size: 20px;"><p>If this does not work, consider turning the NFS firewall off. This is a home Beowulf cluster, how likely is it that someone attacks you?</p></div>
 
-        <h3 style="text-align: center;">KlaudScheduler</h3>
+        <h2 style="text-align: center;">KlaudScheduler</h2>
         <div class="text" style="font-size: 20px;"><p>A cluster scheduler manages and distributes computing resources between multiple jobs, the most popular being SLURM. <a href="https://github.com/coldmayo/KlaudScheduler" target="_blank">KlaudScheduler</a> is the one I made, so I'll walk through how to set that up.</p></div>
         <div class="text" style="font-size: 20px;"><p>Clone the git repo:</p></div>
 <pre><code>git clone https://github.com/coldmayo/KlaudScheduler.git
@@ -159,6 +159,23 @@ set-priority-aging true
 set-nodes-strat SSH
 set-dir /set/working/directory
 </code></pre>
+        <div class="text" style="font-size: 20px;"><p>Some files that contain job and node information need to be shared to all accounts. This is can be done using a folder accessible only by members of a certain group. Make a shared directory located in /home:</p></div>
+        <pre><code>
+        sudo mkdir /home/shared
+        </code></pre>
+        <div class="text" style="font-size: 20px;"><p>On the head node give the users some form of shared user group. I chose the name "klaudcluser" but you can choose whatever you want.</p></div>
+        <pre><code>
+        sudo groupadd klaudcluster
+        sudo usermod -aG klaudcluster master
+        sudo usermod -aG klaudcluster alice
+        </code></pre>
+        <div class="text" style="font-size: 20px;"><p>This does not take effect immediately, you have to log out and log back in.</p></div>
+        <div class="text" style="font-size: 20px;"><p>To give users in this group read/write access use this command:</p></div>
+        <pre><code>
+        sudo chgrp -R klaudcluster /home/shared    # Assign directory to group
+        sudo chmod -R g+rwx /home/shared
+        </code></pre>
+        <div class="text" style="font-size: 20px;"><p>Check if this works by using the touch command in the shared directory.</p></div>
         <div class="text" style="font-size: 20px;"><p>Run the Makefile in the headNode directory to create the needed executables:</p></div>
         <div class="text" style="font-size: 20px;"><ul><li>dispatch</li>
         <ul><li>Used for resource distribution</li></ul>
@@ -177,7 +194,7 @@ set-dir /set/working/directory
 klaudrun --num_cores=6 --command="./hello_mpi"
 </code></pre>
         <div class="text" style="font-size: 20px;"><p>Now you should be good to run computations yourself!</p></div>
-        <div class="text" style="font-size: 20px;"><p>In the future, I plan on configuring permissions, usergroups, benchmarking, updating hardware, and more.</p></div>
+        <div class="text" style="font-size: 20px;"><p>In the future, I plan on configuring benchmarking, updating hardware, containers (Docker, etc), and installing Python.</p></div>
 
         <h2>Other Considerations</h2>
         <div class="text" style="font-size: 20px;"><p>To execute C code that uses MPI you must compile using mpicc instead of gcc, for example:</p></div>
